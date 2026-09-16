@@ -5,12 +5,26 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _get_secret(name: str) -> str:
+    """Check Streamlit secrets first (for cloud deploys), then the environment."""
+    try:
+        import streamlit as st
+        return st.secrets.get(name, "") or os.getenv(name, "")
+    except Exception:
+        return os.getenv(name, "")
+
+
 _client = None
 
 def get_client():
     global _client
     if _client is None:
-        _client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        workspace_id = _get_secret("ANTHROPIC_WORKSPACE_ID")
+        _client = anthropic.AsyncAnthropic(
+            api_key=_get_secret("ANTHROPIC_API_KEY"),
+            default_headers={"anthropic-workspace-id": workspace_id} if workspace_id else None,
+        )
     return _client
 
 MODEL = "claude-sonnet-4-6"
